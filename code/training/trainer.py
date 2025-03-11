@@ -19,11 +19,25 @@ class ModelTrainer:
         
         self.data_collator = DataCollatorForTokenClassification(tokenizer=self.tokenizer)
         
-        tokenized_data = tokenize_dataset(self.dataset, self.tokenizer)
+        tokenized_data = tokenize_dataset(self.dataset.data, self.tokenizer)
         self.train_dataset = tokenized_data.get("train")
         self.eval_dataset = tokenized_data.get("validation")
-    
-    
+
+        self.init_trainer()
+
+
+    def init_trainer(self):
+        trainer = Trainer(
+            model=self.model,
+            args=self.training_args,
+            train_dataset=self.train_dataset,
+            eval_dataset=self.eval_dataset,
+            data_collator=self.data_collator,
+            compute_metrics=self.compute_metrics,
+        )
+        self.trainer = trainer
+
+
     def compute_metrics(self, p):
         predictions, labels = p
         predictions = np.argmax(predictions, axis=2)
@@ -48,19 +62,28 @@ class ModelTrainer:
         }
 
     
-    def train(self):
+    def _train(self):
         resume_from_checkpoint = (self.model.config._name_or_path.split("/")[0] == "models")
-        trainer = Trainer(
-            model=self.model,
-            args=self.training_args,
-            train_dataset=self.train_dataset,
-            eval_dataset=self.eval_dataset,
-            data_collator=self.data_collator,
-            compute_metrics=self.compute_metrics,
-        )
-        
-        trainer.train(resume_from_checkpoint=resume_from_checkpoint)
-        trainer.save_model(self.output_dir)
+        self.trainer.train(resume_from_checkpoint=resume_from_checkpoint)
 
-    def save_model(self, safe_serialization=False):
+
+    def _save_model(self, safe_serialization=False):
         self.model.save_pretrained(self.output_dir, safe_serialization=safe_serialization)
+
+    
+    def _predict(self, batch=None):
+        if batch is None:
+            preds = self.trainer.predict(self.eval_dataset)
+            logits = preds.predictions
+            labels = preds.label_ids
+        else:
+            with torch.no_grad():
+                out = self.model(**batch)
+            logits = out.logits.cpu().numpy()
+            labels = batch["labels"].cpu().numpy()
+            
+        y_pred = np.concatenate(logits).flatten()
+        y_true = np.concatenate(labels).flatten()
+        
+        return (y_pred, y_true)
+    
