@@ -1,5 +1,4 @@
 from datasets import DatasetDict, concatenate_datasets, load_dataset
-from .base_dataset import get_entities
 import json 
 import os
 

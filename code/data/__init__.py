@@ -1,1 +1,1 @@
-from .quaero_dataset import QUAERODataset
+from .quaero_dataset import DrBenchmarkQUAERO
