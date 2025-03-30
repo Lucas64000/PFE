@@ -1,6 +1,6 @@
 from transformers import AutoTokenizer
-from datasets import DatasetDict
-from config import NUM_CPU
+from datasets import DatasetDict, Dataset
+from config import NUM_PROC
 
 
 def load_tokenizer(tokenizer_name: str, **kwargs):
@@ -47,11 +47,19 @@ def tokenize_and_align_labels(examples, tokenizer):
 def tokenize_dataset(dataset: DatasetDict, tokenizer, batch_size: int = 1000):
     def tokenize_function(examples):
         return tokenize_and_align_labels(examples, tokenizer)
-    
+
+    if isinstance(dataset, DatasetDict):
+        first_split = next(iter(dataset.keys()))
+        remove_columns = dataset[first_split].column_names
+    elif isinstance(dataset, Dataset):
+        remove_columns = dataset.column_names
+    else:
+        raise ValueError("L'entrée doit être un Dataset ou un DatasetDict.")
+
     return dataset.map(
         tokenize_function,
         batched=True,
         batch_size=batch_size,
-        num_proc=NUM_CPU,
-        remove_columns=dataset["train"].column_names,
+        num_proc=NUM_PROC,
+        remove_columns=remove_columns,
     )
