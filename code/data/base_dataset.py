@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
-from datasets import load_from_disk, concatenate_datasets, DatasetDict
-from config import NUM_CPU
+from datasets import load_from_disk, concatenate_datasets
+from config import NUM_PROC
 from .data_utils import split_dataset
 
 class BaseDataset(ABC):
@@ -18,7 +18,7 @@ class BaseDataset(ABC):
     def clean_and_split(self, datasets_list, min_len, test_size, seed=42):
         filtered_datasets = []
         for ds in datasets_list:
-            ds_filtered = ds.filter(lambda example: len(example["tokens"]) > min_len, num_proc=NUM_CPU)
+            ds_filtered = ds.filter(lambda example: len(example["tokens"]) > min_len, num_proc=NUM_PROC)
             for split in ds_filtered.keys():
                 filtered_datasets.append(ds_filtered[split])
         
@@ -35,4 +35,8 @@ class BaseDataset(ABC):
 
     @abstractmethod
     def get_label_mapping(self):
+        pass
+
+    @abstractmethod
+    def save_eval_dataset(self, path="datasets/eval/"):
         pass
