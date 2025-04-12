@@ -1,19 +1,23 @@
 import torch
-from transformers import Trainer, TrainingArguments
+from transformers import Trainer
 import evaluate
 from transformers import DataCollatorForTokenClassification
 from tokenizer.tokenizer_utils import tokenize_dataset
 import json
 import numpy as np
+from plots.plot_utils import plot_confusion_matrix, plot_sklearn_report
+import os
 
 class ModelTrainer:
-    def __init__(self, model, dataset, tokenizer, training_args, output_dir="models/"):
+    def __init__(self, model, dataset, tokenizer, training_args):
+        training_args.do_train = True
+
         self.model = model
         self.label_list = model.config.id2label
         self.dataset = dataset
         self.tokenizer = tokenizer
         self.training_args = training_args  
-        self.output_dir = output_dir
+        self.output_dir = training_args.output_dir
         
         self.metric = evaluate.load("seqeval")
         
@@ -23,22 +27,22 @@ class ModelTrainer:
         self.train_dataset = tokenized_data.get("train")
         self.eval_dataset = tokenized_data.get("validation")
 
-        self.init_trainer()
+        self._init_trainer()
 
 
-    def init_trainer(self):
+    def _init_trainer(self):
         trainer = Trainer(
             model=self.model,
             args=self.training_args,
             train_dataset=self.train_dataset,
             eval_dataset=self.eval_dataset,
             data_collator=self.data_collator,
-            compute_metrics=self.compute_metrics,
+            compute_metrics=self._compute_metrics,
         )
         self.trainer = trainer
 
 
-    def compute_metrics(self, p):
+    def _compute_metrics(self, p):
         predictions, labels = p
         predictions = np.argmax(predictions, axis=2)
         
@@ -62,14 +66,18 @@ class ModelTrainer:
         }
 
     
-    def _train(self):
-        resume_from_checkpoint = (self.model.config._name_or_path.split("/")[0] == "models")
+    def train(self):
+        resume_from_checkpoint = any(
+            os.path.isdir(os.path.join(self.output_dir, d)) and d.startswith("checkpoint-")
+            for d in os.listdir(self.output_dir)
+        ) if os.path.exists(self.output_dir) else False
+
         self.trainer.train(resume_from_checkpoint=resume_from_checkpoint)
+        self.tokenizer.save_pretrained(self.output_dir)
 
-
-    def _save_model(self, safe_serialization=False):
+    def save_model(self, safe_serialization=False):
         self.model.save_pretrained(self.output_dir, safe_serialization=safe_serialization)
-
+        self.tokenizer.save_pretrained(self.output_dir)
     
     def _predict(self, batch=None):
         if batch is None:
@@ -82,8 +90,14 @@ class ModelTrainer:
             logits = out.logits.cpu().numpy()
             labels = batch["labels"].cpu().numpy()
             
-        y_pred = np.concatenate(logits).flatten()
+        y_pred = np.argmax(logits, axis=-1)
+        y_pred = np.concatenate(y_pred).flatten()
         y_true = np.concatenate(labels).flatten()
         
         return (y_pred, y_true)
     
+    def evaluate(self, normalize=False):
+        y_pred, y_true = self._predict()
+        id2label = self.model.config.id2label
+        plot_confusion_matrix(y_pred=y_pred, y_true=y_true, id2label=id2label, normalize=normalize)
+        plot_sklearn_report(y_pred=y_pred, y_true=y_true, id2label=id2label)

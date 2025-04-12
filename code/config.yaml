@@ -1,0 +1,33 @@
+# Dataset config
+dataset:
+  split_names:
+    - "emea"
+  min_len: 5
+  test_size: 0.1
+  filepath: null
+  dataset_path: "./datasets/QUAERO"
+
+# Model config
+model:
+  checkpoint: "almanach/camembert-base-oscar-4gb"
+
+# Trainer config
+trainer: 
+  output_dir: "./models/camembert-base-oscar-4gb/training"
+  logging_dir: "./logs"
+  per_device_train_batch_size: 16
+  per_device_eval_batch_size: 16
+  num_train_epochs: 10
+  learning_rate: 2e-5
+  weight_decay: 0.01
+  warmup_steps: 50
+  logging_steps: 50
+  save_strategy: "epoch"
+  save_total_limit: 2
+  report_to:
+    - "tensorboard"
+
+# Eval config
+evaluator:
+  save_path: "./models/camembert-base-oscar-4gb/evaluation"
+  

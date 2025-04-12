@@ -14,6 +14,7 @@ def load_hf_model(checkpoint: str, label_list: str):
 
     return model
 
+
 def load_from_dir(checkpoint: str):
     model = AutoModelForTokenClassification.from_pretrained(
         checkpoint,

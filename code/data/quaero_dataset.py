@@ -1,6 +1,7 @@
 from datasets import load_dataset
 from .base_dataset import BaseDataset
 from .data_utils import DEFAULT_LABELS
+import os
 
 class DrBenchmarkQUAERO(BaseDataset):
     def __init__(self, split_names=None, min_len=5, test_size=0.1, filepath=None):
@@ -28,3 +29,7 @@ class DrBenchmarkQUAERO(BaseDataset):
             entity: DEFAULT_LABELS.get(entity, "Unknown")
             for entity in existing_entities
         }
+    
+    def save_eval_dataset(self, path="./datasets/QUAERO"):
+        os.makedirs(path, exist_ok=True)
+        self.data.save_to_disk(path)
