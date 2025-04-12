@@ -19,10 +19,7 @@ def plot_classes_repartition(dataset, split):
     plt.show()
 
 
-def plot_confusion_matrix(trainer):
-    y_pred, y_true = trainer._predict()
-    id2label = trainer.model.config.id2label
-    
+def plot_confusion_matrix(y_pred, y_true, id2label, normalize):
     conf_matrix = confusion_matrix(y_true, y_pred, labels=list(id2label.keys()))
 
     plt.figure(figsize=(20, 8))
@@ -36,10 +33,7 @@ def plot_confusion_matrix(trainer):
     plt.show()
 
 
-def plot_sklearn_report(trainer):
-    y_pred, y_true = trainer._predict()
-    id2label = trainer.model.config.id2label
-
+def plot_sklearn_report(y_pred, y_true, id2label):
     valid_indices = np.array(y_true) != -100
     y_true_filtered = np.array(y_true)[valid_indices]
     y_pred_filtered = np.array(y_pred)[valid_indices]
@@ -62,10 +56,21 @@ def plot_sklearn_report(trainer):
 
     for label in target_names:
         if label in correct_per_label:
-            report_dict[label]["correct"] = f"{correct_per_label[label]}"
+            report_dict[label]["correct"] = correct_per_label[label]  
 
     df_report = pd.DataFrame(report_dict).transpose()
+
+    macro_avg = report_dict["macro avg"]["f1-score"]
+    weighted_avg = report_dict["weighted avg"]["f1-score"]
+    accuracy = report_dict["accuracy"]
+
+    print(f"Macro F1-score: {macro_avg:.4f}")
+    print(f"Weighted F1-score: {weighted_avg:.4f}")
+    print(f"Accuracy: {accuracy:.4f}")
+
+    numeric_columns = df_report.select_dtypes(include=[np.number])
+
     plt.figure(figsize=(10, 6))
-    sns.heatmap(df_report.iloc[:-3, :-1], annot=True, cmap="Blues", fmt=".2f", linewidths=0.5)
+    sns.heatmap(numeric_columns.iloc[:, :], annot=True, cmap="Blues", fmt=".2f", linewidths=0.5)
     plt.title("Classification Report")
     plt.show()

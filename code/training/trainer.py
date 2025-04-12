@@ -9,7 +9,7 @@ from plots.plot_utils import plot_confusion_matrix, plot_sklearn_report
 import os
 
 class ModelTrainer:
-    def __init__(self, model, dataset, tokenizer, training_args, output_dir="models/"):
+    def __init__(self, model, dataset, tokenizer, training_args):
         training_args.do_train = True
 
         self.model = model
@@ -17,7 +17,7 @@ class ModelTrainer:
         self.dataset = dataset
         self.tokenizer = tokenizer
         self.training_args = training_args  
-        self.output_dir = output_dir
+        self.output_dir = training_args.output_dir
         
         self.metric = evaluate.load("seqeval")
         
@@ -67,7 +67,11 @@ class ModelTrainer:
 
     
     def train(self):
-        resume_from_checkpoint = os.path.exists(self.output_dir)
+        resume_from_checkpoint = any(
+            os.path.isdir(os.path.join(self.output_dir, d)) and d.startswith("checkpoint-")
+            for d in os.listdir(self.output_dir)
+        ) if os.path.exists(self.output_dir) else False
+
         self.trainer.train(resume_from_checkpoint=resume_from_checkpoint)
         self.tokenizer.save_pretrained(self.output_dir)
 

@@ -41,15 +41,17 @@ if __name__ == "__main__":
 
     dataset_path = dataset_config[4]
 
+    split_names = args.split_names if args.split_names else config.dataset["split_names"]
+    num_train_epochs = args.epoch if args.epoch else int(trainer_config[4])
+
     dataset = DrBenchmarkQUAERO(
-        split_names=dataset_config[0],
+        split_names=split_names,
         min_len=dataset_config[1],
         test_size=dataset_config[2],
         filepath=dataset_config[3],
     )
 
     if not os.path.exists(dataset_path):
-        print("Existe pas")
         dataset.save_eval_dataset(path=dataset_path)
         print("Dataset d'évaluation sauvegardé")
 
@@ -67,7 +69,7 @@ if __name__ == "__main__":
         logging_dir=trainer_config[1],
         per_device_train_batch_size=trainer_config[2],
         per_device_eval_batch_size=trainer_config[3],
-        num_train_epochs=int(trainer_config[4]),
+        num_train_epochs=num_train_epochs,
         learning_rate=float(trainer_config[5]),
         weight_decay=trainer_config[6],
         warmup_steps=trainer_config[7],
@@ -81,13 +83,11 @@ if __name__ == "__main__":
         greater_is_better=True,
     )
 
-
     trainer = ModelTrainer(
         model=model,
         dataset=dataset,
         tokenizer=tokenizer,
         training_args=training_args,
-        output_dir=trainer_config[0],
     )
 
     print("Entraînement du modèle en cours")
